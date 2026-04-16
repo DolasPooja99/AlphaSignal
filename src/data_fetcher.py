@@ -1,12 +1,64 @@
 import os
 import requests
 import pandas as pd
+from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
 
 ALPHAVANTAGE_KEY = os.getenv("ALPHAVANTAGE_API_KEY")
 BASE_URL = "https://www.alphavantage.co/query"
+
+# Maps individual tickers to their sector ETF.
+# Used to answer the key question: "is this stock moving with its sector,
+# or is something company-specific happening?"
+#
+# ETF reference:
+#   XLK  = Technology        XLF = Financials      XLV = Healthcare
+#   XLE  = Energy            XLI = Industrials     XLP = Consumer Staples
+#   XLY  = Consumer Discret. XLC = Communication   XLU = Utilities
+#   XLB  = Materials         XLRE = Real Estate
+SECTOR_ETF_MAP = {
+    # Technology
+    "AAPL": "XLK", "MSFT": "XLK", "NVDA": "XLK", "META": "XLK",
+    "GOOGL": "XLK", "GOOG": "XLK", "AMD": "XLK", "INTC": "XLK",
+    "ORCL": "XLK", "CRM": "XLK", "ADBE": "XLK", "QCOM": "XLK",
+    "AVGO": "XLK", "TXN": "XLK", "NOW": "XLK", "SNOW": "XLK",
+    # Financials
+    "JPM": "XLF", "BAC": "XLF", "WFC": "XLF", "GS": "XLF",
+    "MS": "XLF", "BLK": "XLF", "C": "XLF", "AXP": "XLF",
+    "V": "XLF", "MA": "XLF", "SCHW": "XLF",
+    # Healthcare
+    "JNJ": "XLV", "UNH": "XLV", "PFE": "XLV", "ABBV": "XLV",
+    "MRK": "XLV", "TMO": "XLV", "ABT": "XLV", "LLY": "XLV",
+    "BMY": "XLV", "AMGN": "XLV", "GILD": "XLV",
+    # Consumer Discretionary
+    "AMZN": "XLY", "TSLA": "XLY", "HD": "XLY", "MCD": "XLY",
+    "NKE": "XLY", "SBUX": "XLY", "LOW": "XLY", "TGT": "XLY",
+    # Energy
+    "XOM": "XLE", "CVX": "XLE", "COP": "XLE", "SLB": "XLE",
+    "EOG": "XLE", "PXD": "XLE",
+    # Industrials
+    "CAT": "XLI", "BA": "XLI", "GE": "XLI", "HON": "XLI",
+    "UNP": "XLI", "MMM": "XLI", "LMT": "XLI", "RTX": "XLI",
+    # Consumer Staples
+    "PG": "XLP", "KO": "XLP", "PEP": "XLP", "WMT": "XLP",
+    "COST": "XLP", "PM": "XLP", "MO": "XLP",
+    # Communication Services
+    "NFLX": "XLC", "DIS": "XLC", "T": "XLC", "VZ": "XLC",
+    "CMCSA": "XLC", "TMUS": "XLC",
+    # Utilities
+    "NEE": "XLU", "DUK": "XLU", "SO": "XLU", "D": "XLU",
+    # Real Estate
+    "AMT": "XLRE", "PLD": "XLRE", "CCI": "XLRE",
+    # Materials
+    "LIN": "XLB", "APD": "XLB", "NEM": "XLB", "FCX": "XLB",
+}
+
+
+def get_sector_etf(ticker: str) -> Optional[str]:
+    """Returns the sector ETF for a given ticker, or None if not mapped."""
+    return SECTOR_ETF_MAP.get(ticker.upper())
 
 def fetch_daily_prices(ticker: str, days: int = 90) -> pd.DataFrame:
     """
