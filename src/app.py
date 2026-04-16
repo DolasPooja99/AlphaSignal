@@ -71,7 +71,7 @@ default_ticker = st.session_state.get("active_ticker", "AAPL")
 col_input, col_btn, col_spacer = st.columns([2, 1, 5])
 
 with col_input:
-    ticker = st.text_input("Ticker symbol", value=default_ticker).upper().strip()
+    ticker = st.text_input("Ticker Symbol", value=default_ticker).upper().strip()
 with col_btn:
     st.write("")  # vertical align
     analyze_clicked = st.button("Analyze", type="primary", use_container_width=True)
@@ -280,6 +280,7 @@ if ticker in st.session_state.results:
         x=rsi_valid["date"], y=rsi_valid["rsi"],
         name="RSI", line=dict(color="#9B59B6", width=1.5),
         hovertemplate="<b>%{x|%Y-%m-%d}</b><br>RSI: %{y:.1f}<extra></extra>",
+        showlegend=False,
     ), row=2, col=1)
 
     # Overbought / oversold reference lines
@@ -298,20 +299,23 @@ if ticker in st.session_state.results:
                    for v in macd_valid["macd_hist"]]
     fig.add_trace(go.Bar(
         x=macd_valid["date"], y=macd_valid["macd_hist"],
-        name="MACD Histogram", marker_color=hist_colors,
+        name="Histogram", marker_color=hist_colors,
         hovertemplate="<b>%{x|%Y-%m-%d}</b><br>Histogram: %{y:.3f}<extra></extra>",
+        showlegend=False,
     ), row=3, col=1)
 
     fig.add_trace(go.Scatter(
         x=macd_valid["date"], y=macd_valid["macd"],
         name="MACD", line=dict(color="#2196F3", width=1.5),
         hovertemplate="<b>%{x|%Y-%m-%d}</b><br>MACD: %{y:.3f}<extra></extra>",
+        showlegend=False,
     ), row=3, col=1)
 
     fig.add_trace(go.Scatter(
         x=macd_valid["date"], y=macd_valid["macd_signal"],
         name="Signal", line=dict(color="#FF9800", width=1.5),
         hovertemplate="<b>%{x|%Y-%m-%d}</b><br>Signal: %{y:.3f}<extra></extra>",
+        showlegend=False,
     ), row=3, col=1)
 
     # ── Chart layout ───────────────────────────────────────────────────────────
@@ -344,7 +348,16 @@ if ticker in st.session_state.results:
 
     # Current RSI reading with context
     current_rsi = df["rsi"].dropna().iloc[-1]
-    rsi_label   = "🔴 Overbought" if current_rsi > 70 else "🟢 Oversold" if current_rsi < 30 else "⚪ Neutral"
+    if current_rsi > 70:
+        rsi_label = "🔴 Overbought"
+    elif current_rsi >= 60:
+        rsi_label = "🟡 Bullish"
+    elif current_rsi >= 40:
+        rsi_label = "⚪ Neutral"
+    elif current_rsi >= 30:
+        rsi_label = "🟡 Bearish"
+    else:
+        rsi_label = "🟢 Oversold"
     m5.metric("RSI (14)", f"{current_rsi:.1f}", delta=rsi_label, delta_color="off")
 
     st.divider()
@@ -379,7 +392,8 @@ if ticker in st.session_state.results:
             url    = article.get("url", "")
             domain = urlparse(url).netloc.replace("www.", "") if url else ""
 
-            with st.expander(f"{emoji} {article['title'][:55]}..."):
+            title_display = article['title'] if len(article['title']) <= 72 else article['title'][:72] + "…"
+            with st.expander(f"{emoji} {title_display}"):
                 st.caption(f"{article['published_at']} · {label_tag} · score: {sentiment.get('compound', 0)}")
 
                 if article["description"]:
@@ -427,8 +441,8 @@ if ticker in st.session_state.results:
     # list of {"role": "user"/"assistant", "content": "..."} dicts — the same
     # format Claude's API expects. We append each new exchange to this list so
     # the full conversation is always visible and always passed to Claude.
-    st.subheader("💬 Ask Claude a follow-up question")
-    st.caption("Ask anything about this stock — Claude has access to all the data above.")
+    st.subheader("💬 Ask a Follow-up Question")
+    st.caption("Ask anything about this stock based on the analysis above.")
 
     # Initialise chat history for this ticker if it doesn't exist
     if ticker not in st.session_state.chat:

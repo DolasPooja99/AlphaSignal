@@ -16,10 +16,6 @@ Enter any stock ticker and AlphaSignal runs a full pipeline:
 8. **Generates an AI Research Report** via Claude Opus — synthesizing all signals into a structured plain-English report
 9. **Chat interface** — ask Claude follow-up questions about the analysis with full data context
 
-## Screenshot
-
-![AlphaSignal Dashboard](docs/screenshot.png)
-
 ## Tech stack
 
 | Layer | Tool |
