@@ -129,13 +129,23 @@ def fetch_and_store_news(ticker: str) -> int:
 
     model = _get_model()
 
-    # Build text to embed: title + description gives richer signal than title alone
+    # Build text to embed: title + description gives richer signal than title alone.
+    # Also filter out articles where the ticker doesn't appear in the title or
+    # description — NewsAPI sometimes returns loosely related articles (e.g. an
+    # Amazon article when searching "AAPL") that would pollute retrieval results.
+    ticker_upper  = ticker.upper()
+    ticker_lower  = ticker.lower()
     texts = []
     valid_articles = []
     for article in articles:
         title = article.get("title") or ""
         description = article.get("description") or ""
         if not title or title == "[Removed]":
+            continue
+        combined = f"{title} {description}".lower()
+        # Require the ticker symbol to appear somewhere in the article text.
+        # This filters out articles that only tangentially mention the ticker.
+        if ticker_lower not in combined and ticker_upper not in f"{title} {description}":
             continue
         texts.append(f"{title}. {description}".strip())
         valid_articles.append(article)
@@ -179,6 +189,9 @@ def fetch_and_store_news(ticker: str) -> int:
     return stored
 
 
+MIN_RELEVANCE_SCORE = 0.25  # Articles below this threshold are too loosely related
+
+
 def retrieve_relevant_news(ticker: str, query: str, top_k: int = 5) -> list:
     """
     Embeds the query and retrieves the top_k most relevant news articles
@@ -193,6 +206,8 @@ def retrieve_relevant_news(ticker: str, query: str, top_k: int = 5) -> list:
 
     with _get_conn() as conn:
         with conn.cursor() as cur:
+            # Fetch more candidates than needed so filtering by MIN_RELEVANCE_SCORE
+            # still returns up to top_k results.
             cur.execute("""
                 SELECT
                     title,
@@ -208,13 +223,15 @@ def retrieve_relevant_news(ticker: str, query: str, top_k: int = 5) -> list:
                 query_embedding.tolist(),
                 ticker,
                 query_embedding.tolist(),
-                top_k
+                top_k * 3,
             ))
             rows = cur.fetchall()
 
     results = []
     for row in rows:
         title, description, url, published_at, relevance_score = row
+        if float(relevance_score) < MIN_RELEVANCE_SCORE:
+            continue
         # Score sentiment on title + description combined — more signal than title alone
         sentiment = score_sentiment(f"{title}. {description or ''}")
         results.append({
@@ -226,7 +243,7 @@ def retrieve_relevant_news(ticker: str, query: str, top_k: int = 5) -> list:
             "sentiment": sentiment,
         })
 
-    return results
+    return results[:top_k]
 
 
 if __name__ == "__main__":
