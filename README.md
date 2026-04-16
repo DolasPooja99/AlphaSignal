@@ -20,6 +20,8 @@ Enter any stock ticker and AlphaSignal runs a full pipeline:
 
 ![AlphaSignal Dashboard](docs/Screenshot.png)
 
+![AlphaSignal Report](docs/Screenshot1.png)
+
 ## Tech stack
 
 | Layer | Tool |
