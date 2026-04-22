@@ -1,5 +1,7 @@
 # AlphaSignal 📈
 
+> Enter a stock ticker. Get anomaly detection, a 7-day forecast, sentiment-scored news, and a full AI research report — then chat with it.
+
 An AI-powered stock analysis tool that combines quantitative signals with Claude's reasoning to generate plain-English research reports — and lets you have a conversation about them.
 
 ## What it does
